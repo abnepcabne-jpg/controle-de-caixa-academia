@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Caixa Academia</title>
+  <link rel="stylesheet" href="styles.css"/>
+
+  <!-- PDF -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
+
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" id="logoBox">CA</div>
+      <div class="brand-text">
+        <div class="brand-title" id="brandTitle">Caixa Academia</div>
+        <div class="brand-sub" id="brandSub">Controle de caixa • rápido • seguro</div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <div class="user-pill hidden" id="userPill">
+        <span class="dot"></span>
+        <span id="userName"></span>
+        <span class="sep">•</span>
+        <span id="userRole"></span>
+      </div>
+
+      <button class="btn ghost hidden" id="btnChangePass">Trocar senha</button>
+      <button class="btn danger hidden" id="btnLogout">Sair</button>
+    </div>
+  </header>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- APP CONTAINER -->
+  <main class="container">
+
+    <!-- LOGIN -->
+    <section class="card auth" id="viewLogin">
+      <h1>Entrar</h1>
+      <p class="muted">Acesse seu sistema de controle de caixa.</p>
+
+      <div class="grid-2">
+        <div>
+          <label>Usuário</label>
+          <input id="loginUser" type="text" placeholder="ex: admin" autocomplete="username"/>
+        </div>
+        <div>
+          <label>Senha</label>
+          <input id="loginPass" type="password" placeholder="ex: 1234" autocomplete="current-password"/>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="btnLogin">Entrar</button>
+        <button class="btn ghost" id="btnResetDemo" title="Só para testes (apaga tudo e recria o admin).">Reset demo</button>
+      </div>
+
+      <div class="hint">
+        <strong>Login padrão:</strong> usuário <code>admin</code> • senha <code>1234</code>
+      </div>
+    </section>
+
+    <!-- APP -->
+    <section class="hidden" id="viewApp">
+
+      <!-- KPIs -->
+      <section class="kpis">
+        <div class="kpi">
+          <div class="kpi-title">Hoje (Entradas)</div>
+          <div class="kpi-value" id="kpiIn">R$ 0,00</div>
+          <div class="kpi-sub" id="kpiInSub">0 lançamentos</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-title">Hoje (Gastos)</div>
+          <div class="kpi-value" id="kpiOut">R$ 0,00</div>
+          <div class="kpi-sub" id="kpiOutSub">0 lançamentos</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-title">Saldo do Dia</div>
+          <div class="kpi-value" id="kpiBalance">R$ 0,00</div>
+          <div class="kpi-sub" id="kpiBalanceSub">Espécie + Pix + Cartão</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-title">Status</div>
+          <div class="kpi-value" id="kpiStatus">Aberto</div>
+          <div class="kpi-sub" id="kpiStatusSub">Fechamento diário</div>
+        </div>
+      </section>
+
+      <!-- NAV -->
+      <section class="card nav">
+        <button class="tab active" data-tab="tabMov">Movimentação</button>
+        <button class="tab" data-tab="tabHistory">Histórico</button>
+        <button class="tab" data-tab="tabStudents">Alunos</button>
+        <button class="tab" data-tab="tabSettings">Configurações</button>
+      </section>
+
+      <!-- MOVIMENTAÇÃO -->
+      <section class="card" id="tabMov">
+        <div class="card-head">
+          <h2>Movimentação do dia</h2>
+          <div class="card-actions">
+            <button class="btn warn" id="btnCloseDay">Fechar caixa do dia</button>
+            <button class="btn ghost" id="btnPDFMonth">Gerar PDF do mês</button>
+          </div>
+        </div>
+
+        <div class="split">
+          <!-- ENTRADAS -->
+          <div class="panel">
+            <h3>Adicionar entrada</h3>
+            <div class="grid-2">
+              <div>
+                <label>Aluno (opcional)</label>
+                <input id="inStudent" type="text" placeholder="Ex: João Silva"/>
+              </div>
+              <div>
+                <label>Tipo</label>
+                <select id="inType">
+                  <option value="Mensalidade">Mensalidade</option>
+                  <option value="Diária">Diária</option>
+                  <option value="Produto">Produto</option>
+                  <option value="Avaliação">Avaliação</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+              <div>
+                <label>Forma</label>
+                <select id="inPay">
+                  <option value="Espécie">Espécie</option>
+                  <option value="Pix">Pix</option>
+                  <option value="Cartão">Cartão</option>
+                </select>
+              </div>
+              <div>
+                <label>Valor (R$)</label>
+                <input id="inValue" type="number" step="0.01" min="0" placeholder="Ex: 80.00"/>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div>
+                <label>Recebido por</label>
+                <input id="inReceiver" type="text" placeholder="(preenche automático)"/>
+              </div>
+              <div>
+                <label>Observação (opcional)</label>
+                <input id="inNote" type="text" placeholder="Ex: Plano trimestral"/>
+              </div>
+            </div>
+
+            <div class="row">
+              <button class="btn primary" id="btnAddIn">Salvar entrada</button>
+              <button class="btn ghost" id="btnQuickDaily">+ Diária rápida (R$)</button>
+            </div>
+
+            <div class="mini muted">
+              Dica: “Diária rápida” pergunta só o valor e registra como <b>Diária</b> em <b>Espécie</b>.
+            </div>
+          </div>
+
+          <!-- GASTOS -->
+          <div class="panel">
+            <h3>Adicionar gasto</h3>
+            <div class="grid-2">
+              <div>
+                <label>Categoria</label>
+                <select id="outCat">
+                  <option value="Energia">Energia</option>
+                  <option value="Água">Água</option>
+                  <option value="Manutenção">Manutenção</option>
+                  <option value="Limpeza">Limpeza</option>
+                  <option value="Compra">Compra</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+              <div>
+                <label>Valor (R$)</label>
+                <input id="outValue" type="number" step="0.01" min="0" placeholder="Ex: 35.50"/>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div>
+                <label>Pago por</label>
+                <select id="outPay">
+                  <option value="Espécie">Espécie</option>
+                  <option value="Pix">Pix</option>
+                  <option value="Cartão">Cartão</option>
+                </select>
+              </div>
+              <div>
+                <label>Descrição</label>
+                <input id="outDesc" type="text" placeholder="Ex: Papel higiênico"/>
+              </div>
+            </div>
+
+            <div class="row">
+              <button class="btn primary" id="btnAddOut">Salvar gasto</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- LISTAS DO DIA -->
+        <div class="tables">
+          <div class="tablebox">
+            <div class="tablehead">
+              <h3>Entradas de hoje</h3>
+              <div class="table-actions">
+                <button class="btn ghost small" id="btnExportDayPDF">PDF do dia</button>
+              </div>
+            </div>
+            <div class="tablewrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Aluno</th>
+                    <th>Tipo</th>
+                    <th>Forma</th>
+                    <th>Valor</th>
+                    <th>Recebido por</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyIn"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tablebox">
+            <div class="tablehead">
+              <h3>Gastos de hoje</h3>
+            </div>
+            <div class="tablewrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th>Pago por</th>
+                    <th>Valor</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyOut"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HISTÓRICO -->
+      <section class="card hidden" id="tabHistory">
+        <div class="card-head">
+          <h2>Histórico</h2>
+          <div class="card-actions">
+            <button class="btn ghost" id="btnPDFPeriod">PDF do período</button>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div>
+            <label>Data inicial</label>
+            <input id="hisFrom" type="date"/>
+          </div>
+          <div>
+            <label>Data final</label>
+            <input id="hisTo" type="date"/>
+          </div>
+          <div>
+            <label>Filtro</label>
+            <select id="hisFilter">
+              <option value="all">Tudo</option>
+              <option value="in">Somente entradas</option>
+              <option value="out">Somente gastos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn primary" id="btnApplyHistory">Aplicar</button>
+          <button class="btn ghost" id="btnThisMonth">Este mês</button>
+          <button class="btn ghost" id="btnThisWeek">Esta semana</button>
+        </div>
+
+        <div class="history-sum" id="historySummary"></div>
+
+        <div class="tablebox">
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Detalhe</th>
+                  <th>Forma</th>
+                  <th>Valor</th>
+                  <th>Operador</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyHistory"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ALUNOS -->
+      <section class="card hidden" id="tabStudents">
+        <div class="card-head">
+          <h2>Alunos</h2>
+          <div class="card-actions">
+            <button class="btn ghost" id="btnPDFStudent">PDF do aluno</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label>Pesquisar aluno</label>
+            <input id="studentSearch" type="text" placeholder="Digite um nome..."/>
+          </div>
+          <div>
+            <label>Selecionado</label>
+            <input id="studentSelected" type="text" disabled />
+          </div>
+        </div>
+
+        <div class="split">
+          <div class="panel">
+            <h3>Lista (com base nos lançamentos)</h3>
+            <div class="list" id="studentList"></div>
+          </div>
+
+          <div class="panel">
+            <h3>Histórico do aluno</h3>
+            <div class="tablewrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Forma</th>
+                    <th>Valor</th>
+                    <th>Recebido por</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyStudent"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONFIG -->
+      <section class="card hidden" id="tabSettings">
+        <div class="card-head">
+          <h2>Configurações</h2>
+        </div>
+
+        <div class="split">
+          <div class="panel">
+            <h3>Dados da academia</h3>
+            <div class="grid-2">
+              <div>
+                <label>Nome no topo</label>
+                <input id="cfgName" type="text" placeholder="Ex: Academia X"/>
+              </div>
+              <div>
+                <label>Sigla do logo (2 letras)</label>
+                <input id="cfgLogo" type="text" maxlength="2" placeholder="Ex: AX"/>
+              </div>
+            </div>
+            <div class="row">
+              <button class="btn primary" id="btnSaveCfg">Salvar</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>Usuários (admin)</h3>
+            <div class="muted mini">Somente <b>admin</b> pode criar/remover usuários.</div>
+
+            <div class="grid-3">
+              <div>
+                <label>Novo usuário</label>
+                <input id="newUser" type="text" placeholder="ex: maria"/>
+              </div>
+              <div>
+                <label>Senha</label>
+                <input id="newPass" type="password" placeholder="••••"/>
+              </div>
+              <div>
+                <label>Função</label>
+                <select id="newRole">
+                  <option value="Funcionário">Funcionário</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <button class="btn primary" id="btnAddUser">Adicionar usuário</button>
+            </div>
+
+            <div class="tablewrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Usuário</th>
+                    <th>Funçãol</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyUsers"></tbody>
+              </table>
+            </div>
+
+            <div class="mini muted">
+              Observação: por ser LocalStorage, usuários existem apenas no navegador onde foram criados.
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </section>
+  </main>
+
+  <!-- MODAL TROCAR SENHA -->
+  <div class="modal hidden" id="modalPass">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Trocar senha</h3>
+        <button class="iconbtn" id="btnCloseModal">✕</button>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label>Senha atual</label>
+          <input id="oldPass" type="password"/>
+        </div>
+        <div>
+          <label>Nova senha</label>
+          <input id="newPass1" type="password"/>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label>Confirmar nova senha</label>
+          <input id="newPass2" type="password"/>
+        </div>
+        <div class="row right">
+          <button class="btn primary" id="btnSavePass">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
